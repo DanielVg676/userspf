@@ -49,3 +49,28 @@ export async function userPasswordChangedEvent(payload) {
         console.error('Error publicando el evento de cambio de contraseña:', error.message);
     }
 }
+
+// Evento: Cambio de contraseña sin confirmar
+export async function userPasswordChangedEventConfirm(payload) {
+    const RABBITMQ_EXCHANGE = "users_event";
+    const RABBITMQ_ROUTING_KEY = "user.passwords.changed";
+
+    try {
+        const connection = await amqp.connect(RABBITMQ_URL);
+        const channel = await connection.createChannel();
+
+        await channel.assertExchange(RABBITMQ_EXCHANGE, "topic", { durable: true });
+
+        const message = JSON.stringify(payload);
+        channel.publish(RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY, Buffer.from(message));
+
+        console.log(`[x] Exchange "${RABBITMQ_EXCHANGE}", routing key "${RABBITMQ_ROUTING_KEY}": ${message}`);
+
+        setTimeout(() => {
+            connection.close();
+        }, 500);
+    } catch (error) {
+        console.error('Error publicando el evento de cambio de contraseña:', error.message);
+    }
+}
+
