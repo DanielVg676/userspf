@@ -200,10 +200,10 @@ export const login = async (req, res) => {
 
 
 import crypto from "crypto";
-import { userPasswordChangedEvent } from "../services/rabbitService.js";
+import { userPasswordChangedEvent, userPasswordChangedEventConfirm  } from "../services/rabbitService.js";
 
 export const changePasswordByEmail = async (req, res) => {
-    const { email } = req.body;
+    const { email } = req.params;
 
     if (!email) {
         return res.status(400).json({ message: "El correo electrónico es obligatorio." });
@@ -230,6 +230,33 @@ export const changePasswordByEmail = async (req, res) => {
 
         return res.status(200).json({
             message: "Se ha generado una nueva contraseña y se enviará al correo.",
+        });
+    } catch (error) {
+        console.error("Error al cambiar la contraseña:", error);
+        return res.status(500).json({ message: "Error interno del servidor." });
+    }
+};
+
+export const changePassword = async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ message: "El correo electrónico es obligatorio." });
+    }
+
+    try {
+        const user = await User.findOne({ where: { username: email } });
+
+        if (!user) {
+            return res.status(404).json({ message: "No se encontró ningún usuario con ese correo." });
+        }
+        // Publicar evento a RabbitMQ
+        await userPasswordChangedEventConfirm({
+            email: user.username,
+        });
+
+        return res.status(200).json({
+            message: "Se ha se enviado confirmacion al correo.",
         });
     } catch (error) {
         console.error("Error al cambiar la contraseña:", error);
